@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAG 问答 · Vue 3 版</title>
+  <style>
+    :root { --bg:#0f1115; --card:#181b22; --line:#262b36; --fg:#e6e8ee; --dim:#8b93a7; --acc:#42b883; --blue:#5b8cff; --ok:#3ec98b; --bad:#ff6b6b; --warn:#e8b33c; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.7 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
+    .wrap { max-width:1080px; margin:0 auto; padding:28px 20px 64px; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:20px; flex-wrap:wrap; }
+    h1 { font-size:22px; margin:0; }
+    h1 small { color:var(--dim); font-size:13px; font-weight:400; margin-left:8px; }
+    .pill { font-size:12px; padding:3px 10px; border-radius:999px; border:1px solid var(--line); color:var(--dim); display:inline-block; }
+    .pill.ok { color:var(--ok); border-color:#1d5c44; background:#11241c; }
+    .pill.bad { color:var(--bad); border-color:#5c1d1d; background:#241111; }
+    .tabs { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+    .tabs button { background:transparent; color:var(--dim); border:1px solid var(--line); padding:7px 14px; border-radius:9px; cursor:pointer; font-size:14px; }
+    .tabs button.active { color:#fff; border-color:var(--acc); background:#12261e; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px; margin-bottom:16px; }
+    textarea { width:100%; min-height:76px; background:#11141a; color:var(--fg); border:1px solid var(--line); border-radius:10px; padding:12px; font-size:15px; font-family:inherit; resize:vertical; }
+    .row { display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap; }
+    button.primary { background:var(--acc); color:#08130d; border:0; padding:9px 20px; border-radius:9px; font-size:14px; font-weight:600; cursor:pointer; }
+    button.primary:disabled { opacity:.5; cursor:not-allowed; }
+    button.ghost { background:transparent; color:var(--fg); border:1px solid var(--line); padding:8px 14px; border-radius:9px; cursor:pointer; font-size:14px; }
+    select { background:#11141a; color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:7px 10px; }
+    .answer { font-size:16px; line-height:1.85; white-space:pre-wrap; }
+    .refused { color:var(--warn); }
+    .meta { color:var(--dim); font-size:13px; margin-top:10px; display:flex; gap:14px; flex-wrap:wrap; }
+    .cite { border:1px solid var(--line); border-radius:10px; padding:12px; margin-top:10px; background:#11141a; }
+    .cite .head { display:flex; justify-content:space-between; gap:10px; font-size:13px; color:var(--dim); flex-wrap:wrap; }
+    .cite .bar { height:4px; background:#1f2530; border-radius:2px; margin:8px 0 10px; overflow:hidden; }
+    .cite .bar i { display:block; height:100%; background:var(--blue); }
+    .cite .quote { font-size:14px; color:#c8d0e0; }
+    table { width:100%; border-collapse:collapse; font-size:14px; }
+    th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); }
+    th { color:var(--dim); font-weight:500; font-size:13px; }
+    .ok { color:var(--ok); } .bad { color:var(--bad); } .dim { color:var(--dim); } .warn { color:var(--warn); }
+    .err { color:var(--bad); font-size:14px; }
+    .list { margin:0; padding-left:18px; font-size:14px; color:#c8d0e0; }
+    .empty { color:var(--dim); font-size:14px; }
+    code { color:#9ecbff; }
+  </style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="/vendor/vue.global.prod.js"></script>
+<script>
+const { createApp, ref, computed, onMounted } = Vue;
+
+/* 完整模板单独定义：Vue 全局构建自带编译器，模板字符串无需打包工具 */
+const TEMPLATE = `
+<div class="wrap">
+  <header>
+    <h1>RAG 问答 <small>Vue 3 · Composition API</small></h1>
+    <div>
+      <span class="pill" :class="healthy ? 'ok' : 'bad'">
+        {{ health ? (healthy ? 'API 正常 · ' + health.doc_count + ' 篇 / ' + health.chunk_count + ' 块' : 'API 异常') : '连接中…' }}
+      </span>
+      <a class="pill" href="/" style="text-decoration:none;margin-left:8px">← 返回入口</a>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button :class="{active: tab==='ask'}" @click="tab='ask'">问答</button>
+    <button :class="{active: tab==='search'}" @click="tab='search'">检索调试</button>
+    <button :class="{active: tab==='eval'}" @click="tab='eval'">评估面板</button>
+    <button :class="{active: tab==='gold'}" @click="tab='gold'">黄金用例</button>
+  </div>
+
+  <div class="card" v-if="tab==='ask' || tab==='search'">
+    <textarea v-model="question" placeholder="输入问题，例如：libGL.so.1 缺失该用什么命令安装"></textarea>
+    <div class="row">
+      <button class="primary" :disabled="loading || !question.trim()" @click="askQuestion">
+        {{ loading ? '查询中…' : '提问（带出处）' }}
+      </button>
+      <button class="ghost" :disabled="loading || !question.trim()" @click="runSearch">只检索</button>
+      <label class="dim" style="font-size:14px">top_k
+        <select v-model.number="topK">
+          <option :value="1">1</option><option :value="3">3</option>
+          <option :value="5">5</option><option :value="8">8</option>
+        </select>
+      </label>
+    </div>
+    <p class="err" v-if="error">{{ error }}</p>
+  </div>
+
+  <div class="card" v-if="tab==='ask' && result">
+    <div class="answer" :class="{refused: result.refused}">{{ result.answer }}</div>
+    <div class="meta">
+      <span>生成器：{{ result.llm }}</span>
+      <span>耗时：{{ result.latency_ms }} ms</span>
+      <span :class="result.refused ? 'dim' : 'ok'">
+        {{ result.refused ? '已拒答（语料中未提及）' : '引用合法：' + (result.citation_valid ? '是' : '否') }}
+      </span>
+      <span class="dim">检索到 {{ result.retrieved.length }} 块</span>
+    </div>
+
+    <div v-if="result.citations.length" style="margin-top:16px">
+      <div class="dim" style="font-size:13px;margin-bottom:6px">出处（可追溯原文片段）</div>
+      <div class="cite" v-for="c in result.citations" :key="c.index">
+        <div class="head">
+          <span>[{{ c.index }}] {{ c.doc_id }} / {{ c.chunk_id }}</span>
+          <span>相似度 {{ c.score }}</span>
+        </div>
+        <div class="bar"><i :style="{ width: pct(c.score) }"></i></div>
+        <div class="quote">{{ c.quote }}</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px">
+      <div class="dim" style="font-size:13px;margin-bottom:6px">检索命中（按分数降序）</div>
+      <table>
+        <thead><tr><th>#</th><th>文档</th><th>块</th><th>分数</th></tr></thead>
+        <tbody>
+          <tr v-for="(r, i) in result.retrieved" :key="r.chunk_id">
+            <td class="dim">{{ i + 1 }}</td>
+            <td>{{ r.doc_id }}</td>
+            <td class="dim">{{ r.chunk_id }}</td>
+            <td>{{ r.score }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card" v-if="tab==='search'">
+    <div class="empty" v-if="!hits.length">点「只检索」看检索层单独的输出（不生成答案、不花钱）</div>
+    <div class="cite" v-for="(h, i) in hits" :key="h.chunk_id">
+      <div class="head">
+        <span>{{ i + 1 }}. {{ h.doc_id }} / {{ h.chunk_id }}</span>
+        <span>相似度 {{ h.score }}</span>
+      </div>
+      <div class="bar"><i :style="{ width: pct(h.score) }"></i></div>
+      <div class="quote">{{ h.text }}</div>
+    </div>
+  </div>
+
+  <div class="card" v-if="tab==='eval'">
+    <button class="primary" :disabled="evalLoading" @click="runEval">
+      {{ evalLoading ? '跑评估中…' : '跑一遍 gold set' }}
+    </button>
+    <div v-if="evalResult" style="margin-top:16px">
+      <p :class="evalResult.all_pass ? 'ok' : 'bad'">
+        {{ evalResult.all_pass ? '✅ 全部门禁通过' : '❌ 有门禁未通过' }}
+        <span class="dim">（语料 {{ evalResult.metrics.doc_count }} 篇 / {{ evalResult.metrics.chunk_count }} 块）</span>
+      </p>
+      <table>
+        <thead><tr><th>指标</th><th>实测</th><th>门槛</th><th>判定</th></tr></thead>
+        <tbody>
+          <tr v-for="g in evalResult.gates" :key="g.metric">
+            <td>{{ g.metric }}</td>
+            <td>{{ g.value }}</td>
+            <td class="dim">≥ {{ g.floor }}</td>
+            <td :class="g.pass ? 'ok' : 'bad'">{{ g.pass ? 'PASS' : 'FAIL' }}</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div v-if="evalResult.failures.length" style="margin-top:14px">
+        <div class="bad" style="font-size:13px">失败案例</div>
+        <ul class="list"><li v-for="(f, i) in evalResult.failures" :key="i">{{ f }}</li></ul>
+      </div>
+      <div v-if="evalResult.known_issues.length" style="margin-top:14px">
+        <div class="warn" style="font-size:13px">已登记缺陷</div>
+        <ul class="list"><li v-for="(k, i) in evalResult.known_issues" :key="i">{{ k }}</li></ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" v-if="tab==='gold'">
+    <button class="ghost" @click="loadGold">加载黄金用例</button>
+    <table v-if="gold.length" style="margin-top:14px">
+      <thead><tr><th>ID</th><th>类型</th><th>问题</th><th>关键证据</th></tr></thead>
+      <tbody>
+        <tr v-for="g in gold" :key="g.id">
+          <td class="dim">{{ g.id }}</td>
+          <td>{{ g.type }}</td>
+          <td>{{ g.question }}</td>
+          <td class="dim">{{ g.must_contain || '（应拒答）' }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="empty" v-else>共 12 条：hit / boundary / multi / refuse 四类</p>
+  </div>
+</div>
+`;
+
+createApp({
+  setup() {
+    const tab = ref("ask");
+    const question = ref("清华镜像装 torch 失败是什么原因");
+    const topK = ref(5);
+    const loading = ref(false);
+    const evalLoading = ref(false);
+    const error = ref("");
+    const health = ref(null);
+    const result = ref(null);
+    const hits = ref([]);
+    const evalResult = ref(null);
+    const gold = ref([]);
+
+    const healthy = computed(() => !!health.value && health.value.status === "ok");
+
+    async function callApi(path, body) {
+      const options = body
+        ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+        : { method: "GET" };
+      const resp = await fetch(path, options);
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || data.detail || "请求失败 " + resp.status);
+      return data;
+    }
+
+    async function loadHealth() {
+      try { health.value = await callApi("/api/health"); }
+      catch (e) { error.value = "健康检查失败：" + e.message; }
+    }
+
+    async function askQuestion() {
+      loading.value = true; error.value = ""; result.value = null;
+      try { result.value = await callApi("/api/ask", { question: question.value, top_k: topK.value }); }
+      catch (e) { error.value = e.message; }
+      finally { loading.value = false; }
+    }
+
+    async function runSearch() {
+      loading.value = true; error.value = ""; hits.value = [];
+      try {
+        const data = await callApi("/api/search", { question: question.value, top_k: topK.value });
+        hits.value = data.hits;
+      } catch (e) { error.value = e.message; }
+      finally { loading.value = false; }
+    }
+
+    async function runEval() {
+      evalLoading.value = true; error.value = "";
+      try { evalResult.value = await callApi("/api/eval", { chunk_size: 200, overlap: 40, top_k: 5 }); }
+      catch (e) { error.value = e.message; }
+      finally { evalLoading.value = false; }
+    }
+
+    async function loadGold() {
+      try { const data = await callApi("/api/gold"); gold.value = data.items; }
+      catch (e) { error.value = e.message; }
+    }
+
+    function pct(score) { return Math.max(2, Math.round(score * 100)) + "%"; }
+
+    onMounted(loadHealth);
+
+    return { tab, question, topK, loading, evalLoading, error, health, healthy,
+             result, hits, evalResult, gold, askQuestion, runSearch, runEval, loadGold, pct };
+  },
+  template: TEMPLATE,
+}).mount("#app");
+</script>
+</body>
+</html>

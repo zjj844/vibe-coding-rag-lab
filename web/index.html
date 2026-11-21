@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAG 自动化测试 · 前端入口</title>
+  <style>
+    :root { --bg:#0f1115; --card:#181b22; --line:#262b36; --fg:#e6e8ee; --dim:#8b93a7; --acc:#5b8cff; --ok:#3ec98b; --warn:#e8b33c; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.7 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif; }
+    .wrap { max-width:900px; margin:0 auto; padding:48px 24px; }
+    h1 { font-size:26px; margin:0 0 8px; }
+    p.sub { color:var(--dim); margin:0 0 32px; }
+    .cards { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width:720px){ .cards { grid-template-columns:1fr; } }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:20px; }
+    .card h2 { font-size:17px; margin:0 0 6px; display:flex; align-items:center; gap:8px; }
+    .badge { font-size:12px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); }
+    .badge.ok { color:var(--ok); border-color:#1d5c44; background:#11241c; }
+    .badge.warn { color:var(--warn); border-color:#5c4a1d; background:#241f11; }
+    .card p { color:var(--dim); font-size:14px; margin:8px 0 16px; }
+    a.btn { display:inline-block; background:var(--acc); color:#fff; text-decoration:none; padding:9px 16px; border-radius:9px; font-size:14px; }
+    a.btn.ghost { background:transparent; border:1px solid var(--line); color:var(--fg); }
+    pre { background:#11141a; border:1px solid var(--line); border-radius:10px; padding:14px; overflow:auto; font-size:13px; color:#c8d0e0; }
+    code { color:#9ecbff; }
+    h3 { margin-top:36px; font-size:16px; }
+    .muted { color:var(--dim); font-size:13px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <h1>RAG 自动化测试 · 前端入口</h1>
+  <p class="sub">同一套后端 API，两个前端框架各实现一版 —— 用来验证"接口契约稳定，前端可替换"。</p>
+
+  <div class="cards">
+    <div class="card">
+      <h2>Vue 3 <span class="badge ok">离线可跑</span></h2>
+      <p>Vue 3.5.16（Composition API），库文件已本地化到 <code>web/vendor/</code>，不依赖 CDN。</p>
+      <a class="btn" href="/vue/">打开 Vue 版 →</a>
+    </div>
+    <div class="card">
+      <h2>React 18 <span class="badge ok">已预构建</span></h2>
+      <p>React 18 + Vite 工程（Hooks）。依赖已装、已用 esbuild 打包成 <code>web/react/dist/app.js</code>，可直接打开；改源码后重新构建或用 <code>npm run dev</code>。</p>
+      <a class="btn" href="/react/">打开 React 版 →</a>
+    </div>
+  </div>
+
+  <h3>后端 API 契约（两个前端都对着它写）</h3>
+  <pre>GET  /api/health                         → { status, doc_count, chunk_count, llm }
+POST /api/ask     {"question","top_k"}   → { answer, citations[], refused, retrieved[], citation_valid, latency_ms }
+POST /api/search  {"question","top_k"}   → { hits:[{doc_id,chunk_id,text,score}] }
+GET  /api/gold                           → { items:[黄金用例] }
+POST /api/eval    {"chunk_size","overlap"} → { metrics, gates[], all_pass, failures[], known_issues[] }</pre>
+
+  <h3>命令行自测</h3>
+  <pre><code>python -c "import urllib.request,json; r=urllib.request.urlopen('http://127.0.0.1:8000/api/health'); print(r.read().decode())"</code></pre>
+
+  <p class="muted">后端：Flask 适配器（本机无 fastapi）· 接口契约与 FastAPI 版一致 · 详见 <code>api/</code> 目录</p>
+</div>
+</body>
+</html>

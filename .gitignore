@@ -1,0 +1,24 @@
+# ---- Python ----
+__pycache__/
+*.pyc
+.pytest_cache/
+pytest-cache-files-*/
+tests/_tmp/
+
+# ---- 密钥（绝不提交）----
+.env
+
+# ---- 依赖 / 缓存（体积大，可重装）----
+node_modules/
+.npm-cache/
+models/
+
+# ---- 临时工作目录 ----
+.tmp/
+.tmp_npm/
+.pylibs/
+
+# ---- 必须提交的例外 ----
+# evals/artifacts/  ：每次评估的历史存档，用于版本对比
+# web/react/dist/   ：预构建产物，让别人 clone 后不装 node_modules 也能打开 /react/
+# web/vendor/       ：本地化的 Vue 库，离线可跑

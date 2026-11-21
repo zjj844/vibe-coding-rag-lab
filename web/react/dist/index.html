@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RAG 问答 · React 18 版</title>
+  <link rel="stylesheet" href="/react/dist/app.css" />
+</head>
+<body>
+  <!-- 启动失败时的浮层：黑屏是最难查的问题，所以任何 JS 错误都直接显示在这里 -->
+  <div id="boot-error" style="display:none;margin:24px;padding:16px;border:1px solid #5c1d1d;border-radius:10px;background:#241111;color:#ff8a8a;font:13px/1.6 monospace;white-space:pre-wrap"></div>
+
+  <div id="root">
+    <!-- React 挂载后会替换这里；如果一直看到这行字，说明 app.js 没跑起来 -->
+    <div style="padding:24px;color:#8b93a7;font:14px/1.6 -apple-system,'Segoe UI','Microsoft YaHei',sans-serif">
+      正在加载 React 应用…
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      function show(msg) {
+        var box = document.getElementById("boot-error");
+        box.style.display = "block";
+        box.textContent = "❌ 页面启动失败：\n" + msg;
+      }
+      window.addEventListener("error", function (e) {
+        show((e.message || e.error) + "\n" + (e.filename || "") + ":" + (e.lineno || ""));
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        show("未处理的 Promise 拒绝：" + (e.reason && (e.reason.stack || e.reason.message || e.reason)));
+      });
+    })();
+  </script>
+
+  <!-- esbuild 产物（150KB，production 版）。改源码后重新构建：
+       web\react\build.cmd
+       或在普通终端里用 Vite： cd web/react && npm run dev -->
+  <script src="/react/dist/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{"id":"q01","type":"hit","question":"清华镜像装 torch 失败是什么原因","gold_doc_ids":["01-环境搭建-镜像源与torch"],"must_contain":"镜像","notes":"单块即可覆盖，测基本召回"}
+{"id":"q02","type":"hit","question":"HuggingFace 下载模型总是超时怎么办","gold_doc_ids":["02-嵌入模型-魔搭下载"],"must_contain":"魔搭","notes":"单块即可覆盖"}
+{"id":"q03","type":"hit","question":"libGL.so.1 缺失该用什么命令安装","gold_doc_ids":["03-系统库-libGL缺失"],"must_contain":"apt","notes":"系统库 vs Python 包的区分"}
+{"id":"q04","type":"hit","question":"接口返回 401 应该先检查什么","gold_doc_ids":["04-接口认证-401排查"],"must_contain":"base_url","notes":"排查顺序类问题"}
+{"id":"q05","type":"boundary","question":"分块的 overlap 设成 0 会有什么问题","gold_doc_ids":["06-分块参数-chunk与overlap"],"must_contain":"overlap","notes":"关键词与自然语言问法不完全一致"}
+{"id":"q06","type":"boundary","question":"为什么说系统库缺失不能用 pip 解决","gold_doc_ids":["03-系统库-libGL缺失"],"must_contain":"pip","notes":"需要理解因果关系，不是关键词命中"}
+{"id":"q07","type":"boundary","question":"答案没有引用算不算幻觉","gold_doc_ids":["07-引用溯源设计"],"must_contain":"幻觉","notes":"考察是否召回定义段落"}
+{"id":"q08","type":"refuse","question":"这本教材的作者和出版社是谁","gold_doc_ids":[],"must_contain":"","notes":"语料内无此信息，必须拒答"}
+{"id":"q09","type":"refuse","question":"作者的邮箱地址是多少","gold_doc_ids":[],"must_contain":"","notes":"语料内无此信息，必须拒答"}
+{"id":"q10","type":"refuse","question":"Python 3.13 上 torch 安装包有多大","gold_doc_ids":[],"must_contain":"","notes":"【预期失败案例】能检索到正确文档，但抽取式回答不会拒答，留作失败剖析"}
+{"id":"q11","type":"multi","question":"评估 RAG 系统要看哪些指标","gold_doc_ids":["08-评估设计-EVAL"],"must_contain":"Recall","notes":"指标类问题，考察召回是否命中定义段"}
+{"id":"q12","type":"multi","question":"NLTK 报 LookupError 时目录该怎么放","gold_doc_ids":["05-NLTK数据目录"],"must_contain":"taggers","notes":"结构约定类问题"}
