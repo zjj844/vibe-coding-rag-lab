@@ -5,7 +5,7 @@
 2. 换模型/换网关只改这里；
 3. 测试里可以把它替换掉，不需要联网。
 
-这里只做"一问一答"，不做 RAG、不做业务 —— 业务在 qa_agent / rag 里。
+这里只做"一问一答"，不做 RAG、不做业务 —— 业务在 rag/pipeline.py 里。
 """
 from __future__ import annotations
 

@@ -3,7 +3,7 @@
 为什么要这个工具：
 `deepseek-v4-pro` 是**推理模型**，会先输出 `reasoning_content`（思考）再输出 `content`（正文）。
 如果 max_tokens 给小了，token 全花在思考上，正文返回空 —— 表现为"模型没有返回任何代码"，
-极难从报错里看出原因（第一次跑 qa_agent 就踩了这个坑）。
+极难从报错里看出原因（第一次跑生成用例时踩了这个坑）。
 
 用法：
     python scripts/check_models.py
